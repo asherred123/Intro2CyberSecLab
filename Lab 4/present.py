@@ -32,41 +32,67 @@ def ror(val, r_bits, max_bits): return \
 
 
 def genRoundKeys(key):
-    #inputs binary of key
-    #outputs dictionary of round keys
-    round_counter = 1 
-    key = key
-    roundKeys = {}
-    #round 1 k1 is 64 leftmost bits of key 
-    roundKeys[0] = 32
-    roundKeys[1] = key >> 16 
-    print(roundKeys[0])
-    for i in range(2, 32):
-        roundKeys[i] = rol(roundKeys[i-1], 61, 64)
-        #sbox substitution for first 4 bits
-        roundKeys[i] = sbox[roundKeys[i] >> 60] << 60
-        print(roundKeys[i])
-        round_counter += 1
+    """Generate round keys for all rounds."""
+    round_keys = {}
+    round_keys[0] = FULLROUND + 1 
+    
+    
+    for round_counter in range(1, FULLROUND + 2):
+        # Extract the round key
+        round_key = (key >> 16) 
+        round_keys[round_counter] = round_key
+        
+        # Perform key schedule operations
+        key = rol(key, 61, 80)
+        key = sBoxLayer(key)
+        key = key ^ (round_counter << 15)
+        
+    return round_keys
+
+    
 
 
 def addRoundKey(state, Ki):
     #inputs binary of state and Ki
-    #
-
-
-
-    pass
+    #outputs binary of state XOR Ki
+    state = state ^ Ki
+    return state
 
 
 def sBoxLayer(state):
-    pass
+
+    #inputs binary of state
+    #outputs binary of state based on sbox
+    top_five = (state >> 76) & 0xF
+    substituted = sbox[top_five]
+    # Clear the top 4 bits and set the substituted value
+    state &= ~(0xF << 76)
+    state |= (substituted << 76)
+    return state
+
+    
+
+    
 
 
 def pLayer(state):
-    pass
+    #bit i of state is moved to bit pmt[i] of output
+    #inputs binary of state
+    #outputs binary of state based on pLayer
+    output = 0
+    for i in range(64):
+        if (state >> i) & 1:
+            output |= 1 << pmt[i]   
+    return output
 
 
 def present_round(state, roundKey):
+    #inputs binary of state and key
+    
+    state = addRoundKey(state, roundKey)
+    state = sBoxLayer(state)
+    state = pLayer(state)
+
     return state
 
 
@@ -96,14 +122,16 @@ if __name__ == "__main__":
     key1 = 0x00000000000000000000
     keys = genRoundKeys(key1)
     keysTest = {0: 32, 1: 0, 2: 13835058055282163712, 3: 5764633911313301505, 4: 6917540022807691265, 5: 12682149744835821666, 6: 10376317730742599722, 7: 442003720503347, 8: 11529390968771969115, 9: 14988212656689645132, 10: 3459180129660437124, 11: 16147979721148203861, 12: 17296668118696855021, 13: 9227134571072480414, 14: 4618353464114686070, 15: 8183717834812044671, 16: 1198465691292819143, 17: 2366045755749583272, 18: 13941741584329639728, 19: 14494474964360714113, 20: 7646225019617799193, 21: 13645358504996018922, 22: 554074333738726254, 23: 4786096007684651070, 24: 4741631033305121237, 25: 17717416268623621775, 26: 3100551030501750445, 27: 9708113044954383277, 28: 10149619148849421687, 29: 2165863751534438555, 30: 15021127369453955789, 31: 10061738721142127305, 32: 7902464346767349504}
-    for k in keysTest.keys():
+    for k in keysTest.keys():        
         assert keysTest[k] == keys[k]
     
     # Testvectors for single rounds without keyscheduling
     plain1 = 0x0000000000000000
     key1 = 0x00000000000000000000
     round1 = present_round(plain1, key1)
+    print("round1", round1)
     round11 = 0xffffffff00000000
+    print("round11", round11)
     assert round1 == round11
 
     round2 = present_round(round1, key1)
