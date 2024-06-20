@@ -17,6 +17,22 @@ pmt = [0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51,
        12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63]
 
 # Rotate left: 0b1001 --> 0b0011
+inv_sbox = [sbox.index(i) for i in range(16)]
+
+def inv_sBoxLayer(state):
+    new_state = 0
+    for i in range(16):
+        nibble = (state >> (i * 4)) & 0xF
+        substituted = inv_sbox[nibble]
+        new_state |= (substituted << (i * 4))
+    return new_state
+
+def inv_pLayer(state):
+    output = 0x0000000000000000
+    for i in range(64):
+        bit = (state >> pmt[i]) & 0x1
+        output |= bit << i
+    return output
 
 
 def rol(val, r_bits, max_bits): return \
@@ -34,21 +50,24 @@ def ror(val, r_bits, max_bits): return \
 def genRoundKeys(key):
     """Generate round keys for all rounds."""
     round_keys = {}
-    round_keys[0] = FULLROUND + 1 
-    
-    
+    round_keys[0] = 32
     for round_counter in range(1, FULLROUND + 2):
-        # Extract the round key
-        round_key = (key >> 16) 
+        # Extract the round key (top 64 bits of the key)
+        round_key = (key >> 16) & 0xFFFFFFFFFFFFFFFF
         round_keys[round_counter] = round_key
         
         # Perform key schedule operations
+        # 1. Rotate the key 61 bits to the left
         key = rol(key, 61, 80)
-        key = sBoxLayer(key)
-        key = key ^ (round_counter << 15)
         
+        # 2. Apply S-box to the top 4 bits of the key
+        top_four_bits = (key >> 76) & 0xF
+        substituted = sbox[top_four_bits]
+        key = (key & ~(0xF << 76)) | (substituted << 76)
+        
+        # 3. XOR the round counter into bits [19:15] of the key
+        key = key ^ (round_counter << 15)
     return round_keys
-
     
 
 
@@ -60,15 +79,17 @@ def addRoundKey(state, Ki):
 
 
 def sBoxLayer(state):
+    # Apply S-box to each 4-bit nibble
+    new_state = 0
+    for i in range(16):
+        # Extract the 4-bit nibble
+        nibble = (state >> (i * 4)) & 0xF
+        # Apply the S-box substitution
+        substituted = sbox[nibble]
+        # Place the substituted nibble back in the new state
+        new_state |= (substituted << (i * 4))
+    return new_state
 
-    #inputs binary of state
-    #outputs binary of state based on sbox
-    top_five = (state >> 76) & 0xF
-    substituted = sbox[top_five]
-    # Clear the top 4 bits and set the substituted value
-    state &= ~(0xF << 76)
-    state |= (substituted << 76)
-    return state
 
     
 
@@ -79,25 +100,43 @@ def pLayer(state):
     #bit i of state is moved to bit pmt[i] of output
     #inputs binary of state
     #outputs binary of state based on pLayer
-    output = 0
+
+    pmt = [0, 16, 32, 48, 1, 17, 33, 49, 2, 18, 34, 50, 3, 19, 35, 51,
+       4, 20, 36, 52, 5, 21, 37, 53, 6, 22, 38, 54, 7, 23, 39, 55,
+       8, 24, 40, 56, 9, 25, 41, 57, 10, 26, 42, 58, 11, 27, 43, 59,
+       12, 28, 44, 60, 13, 29, 45, 61, 14, 30, 46, 62, 15, 31, 47, 63]
+
+    
+    output = 0x0000000000000000
     for i in range(64):
-        if (state >> i) & 1:
-            output |= 1 << pmt[i]   
+        # Get the i-th bit of the state
+        bit = (state >> i) & 0x1
+        # Move this bit to the pmt[i] position in the output
+        output |= bit << pmt[i]
+       
     return output
+
 
 
 def present_round(state, roundKey):
     #inputs binary of state and key
     
     state = addRoundKey(state, roundKey)
+    #print("state after add round key", state)
     state = sBoxLayer(state)
+    #print("state after sbox", state)
     state = pLayer(state)
-
+    #print("state after player round", state)
     return state
 
 
 def present_inv_round(state, roundKey):
+    state = inv_pLayer(state)
+    state = inv_sBoxLayer(state)
+    state = addRoundKey(state, roundKey)
+
     return state
+
 
 
 def present(plain, key):
@@ -105,6 +144,7 @@ def present(plain, key):
     state = plain
     for i in range(1, FULLROUND + 1):
         state = present_round(state, K[i])
+        #print("state after round", i, state)
     state = addRoundKey(state, K[32])
     return state
 
@@ -129,9 +169,9 @@ if __name__ == "__main__":
     plain1 = 0x0000000000000000
     key1 = 0x00000000000000000000
     round1 = present_round(plain1, key1)
-    print("round1", round1)
+   
     round11 = 0xffffffff00000000
-    print("round11", round11)
+
     assert round1 == round11
 
     round2 = present_round(round1, key1)
@@ -144,6 +184,7 @@ if __name__ == "__main__":
 
     # invert single rounds
     plain11 = present_inv_round(round1, key1)
+ 
     assert plain1 == plain11
     plain22 = present_inv_round(round2, key1)
     assert round1 == plain22
