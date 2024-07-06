@@ -1,0 +1,19 @@
+1. There is no difference between addition and subtraction operation for all elements of GF(3).
+•	Answer: False
+•	Justification: In GF(3), the elements are {0, 1, 2}. The addition and subtraction tables are different. For instance, 1+2= 0 and 1- 2 =2. Therefore, addition and subtraction are not identical in GF(3).
+
+2. There is no difference between addition and subtraction operation for all elements of GF(2^N), for any integer N.
+•	Answer: True
+•	Justification: In GF(2^N), addition and subtraction are equivalent because both operations are defined using bitwise XOR. For any two elements a and b, a + b = a =b in this field. 
+
+3. For all elements of GF(2), multiplication is equivalent to an AND gate.
+•	Answer: True
+•	Justification: In GF(2), the elements are {0, 1}. Multiplication in GF(2) follows the same rules as the AND gate 
+
+4. A polynomial of degree 8 is a possible element of the field GF(2^8).
+•	Answer: False
+•	Justification: Elements of GF(2^8) are polynomials of degree less than 8 with coefficients in GF(2). A polynomial of degree 8 would have 9 terms, which is too large to represent an element of GF(2^8).
+
+5. P(x) = x^4 + x^3 + x + 1 is an irreducible polynomial.
+•	Answer: True
+•	Justification: A polynomial is irreducible over a field if it cannot be factored into the product of two non-constant polynomials over that field. P(x) = x^4 + x^3 + x + 1 is irreducible over GF(2) because it does not factor into polynomials of lower degree with coefficients in GF(2).
