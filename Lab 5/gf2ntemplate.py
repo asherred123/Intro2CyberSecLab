@@ -1,7 +1,7 @@
 # 50.042 FCS Lab 5 Modular Arithmetic
 # Year 2024
 
-import copy
+from copy import deepcopy
 # add is xor operation
 # mul is and operation
 class Polynomial2:
@@ -14,46 +14,123 @@ class Polynomial2:
         #xor operation
         list1 = self.coeffs
         list2 = p2.coeffs
-        print("list 1 is ", list1)  
-        print("list 2 is ", list2)
+    
         #find the max length
-        max_len = max(len(list1), len(list2))
-            
-        return str(self)
+        min_length = min(len(list1), len(list2))
+        max_length = max(len(list1), len(list2))
+        #perform xor operation
+        result = []
+        for i in range(max_length):
+            if i < min_length:
+                result.append(list1[i] ^ list2[i])
+            else:
+                if len(list1) > len(list2):
+                    result.append(list1[i])
+                else:
+                    result.append(list2[i])
+        return Polynomial2(result)
 
     def sub(self,p2):
-        pass
+        #xor operation
+        list1 = self.coeffs
+        list2 = p2.coeffs
+    
+        #find the max length
+        min_length = min(len(list1), len(list2))
+        max_length = max(len(list1), len(list2))
+        #perform xor operation
+        result = []
+        for i in range(max_length):
+            if i < min_length:
+                result.append(list1[i] ^ list2[i])
+            else:
+                if len(list1) > len(list2):
+                    result.append(list1[i])
+                else:
+                    result.append(list2[i])
+        return Polynomial2(result)
 
     def mul(self,p2,modp=None):
-        pass
+        # initialise new result
+        new_coeffs = [0] * ((len(self.coeffs)) + len(p2.coeffs) -1)
+
+        # generate partial result
+        for i in range(len(p2.coeffs)):
+            if p2.coeffs[i] == 1:
+                partial_res = self.coeffs[:]        # make a copy first
+                partial_res += [0]*i                # shift left by i bits
+                for j in range(len(partial_res)):
+                    new_coeffs[j] = new_coeffs[j] ^ partial_res[j] # update new_coeffs
+
+        # perform modulus reduction if necessary
+        if modp != None:
+            mod_len = len(modp.coeffs)
+            while len(new_coeffs) >= mod_len:
+                if new_coeffs[0] == 1:          # MSB = 1
+                    for k in range(mod_len):    
+                        new_coeffs[k] = new_coeffs[k] ^ modp.coeffs[k] # XOR with modp
+                new_coeffs.pop(0) # remove first element
+
+        return Polynomial2(new_coeffs)
+    @property
+    def deg(self):
+        return len(self.coeffs) - 1
+
+    @property
+    def lc(self):
+        return self.coeffs[-1]
 
     def div(self,p2):
-        pass
+        """
+        using euclidean division
+        deg = degree of argument
+        lc = leading coefficient (highest degree of variable)
+        """
+        q,r = Polynomial2([0]), deepcopy(self)
+
+        b,c = p2, p2.lc
+        
+
+        if (r.deg >= p2.deg):
+            s = Polynomial2([0 for i in range(r.deg - p2.deg)] + [1])
+            q = s.add(q)
+            r = r.sub(s.mul(b))
+
         return q, r
+
 
     def __str__(self):
         list1 = self.coeffs
-        print("list 1 is ", list1)
-        #iterate from -len(list1) to -1
         string = ""
-        #p1=x^5+x^2+x
-        for i in range(len(list1) -1 , -1, -1):
-            #print("i is ", i)
-            if list1[i] == 1:
+        
+        # Iterate from the highest degree term to the lowest
+        for i in range(len(list1) - 1, -1, -1):
+            if list1[i] != 0:
                 if i == 0:
-                    string +="1"
-                if i == 1: 
-                    if list1[0] == 1:
-                        string +="x+1"
-                    elif list1[0] == 0:
-                        string +="x"
+                    string += "1" if list1[i] == 1 else str(list1[i])
+                elif i == 1:
+                    string += "x" if list1[i] == 1 else f"{list1[i]}x"
                 else:
-                    string +="x^"+str(i)+"+"
+                    string += f"x^{i}" if list1[i] == 1 else f"{list1[i]}x^{i}"
+                # Add the plus sign for all terms except the last one added
+                if i != 0:
+                    string += "+"
 
+        # Remove the trailing ' + ' if it exists
+        if string.endswith("+"):
+            string = string[:-3]
+        
         return string
 
+ 
+
     def getInt(p):
-        pass
+        result = 0
+        for index,coeff in enumerate(p.coeffs):
+            result += coeff * (2**index)
+            
+        return result
+
 
 
 class GF2N:
@@ -67,28 +144,53 @@ class GF2N:
                [0,0,0,1,1,1,1,1]]
 
     def __init__(self,x,n=8,ip=Polynomial2([1,1,0,1,1,0,0,0,1])):
-        pass
+        self.x  = x
+        self.n = n
+        self.ip = ip
+        
 
 
     def add(self,g2):
-        pass
-    def sub(self,g2):
-        pass
-    
-    def mul(self,g2):
-        pass
+        p1 = self.getPolynomial2()
+        p2 = g2.getPolynomial2()
+        result = p1.mul(p2, self.ip)
+     
 
-    def div(self,g2):
-        pass
+        return GF2N(result.getInt(),self.n,self.ip)
+
+    def sub(self, g2):
+        return self.add(g2.p)
+
+    def mul(self, g2):
+        p1 = self.getPolynomial2()
+        p2 = g2.getPolynomial2()
+        result = p1.mul(p2, self.ip)
+        return GF2N(result.getInt(), self.n, self.ip)
+
+    def div(self, g2):
+        p1 = self.getPolynomial2()
+        p2 = g2.getPolynomial2()
+
+        quotient, remainder = p1.div(p2)
+        quotient, remainder = quotient.getInt(), remainder.getInt()
+        return GF2N(quotient, self.n, self.ip), GF2N(remainder, self.n, self.ip)
 
     def getPolynomial2(self):
-        pass
+        """
+        change int input to polynomial
+        1. change self to binary, take note of 1
+        2. if 1 --> coefficient = 1
+        """
+        binary = bin(self.x)[2:]
+        polynomial = Polynomial2([int(x) for x in binary][::-1])
+
+        return polynomial
 
     def __str__(self):
-        pass
+        return str(self.getPolynomial2().getInt())
 
     def getInt(self):
-        pass
+        return self.getPolynomial2().getInt()
 
     def mulInv(self):
         pass
@@ -101,6 +203,7 @@ print('======')
 print('p1=x^5+x^2+x')
 print('p2=x^3+x^2+1')
 p1=Polynomial2([0,1,1,0,0,1])
+print('p1=',p1)
 p2=Polynomial2([1,0,1,1])
 p3=p1.add(p2)
 print('p3= p1+p2 = ',p3)
@@ -142,7 +245,7 @@ g5=GF2N(0b110,4,ip)
 print('g4 = ',g4.getPolynomial2())
 print('g5 = ',g5.getPolynomial2())
 g6=g4.mul(g5)
-print('g4 x g5 = ',g6.p)
+print('g4 x g5 = ',g6.ip)
 
 print('\nTest 6')
 print('======')
