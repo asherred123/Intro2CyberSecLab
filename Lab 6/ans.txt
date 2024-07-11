@@ -1,0 +1,13 @@
+Q1. How could we perform the exchange of keys in the real world? Do we need a secure channel? Why or why not?
+
+In the real world, key exchange can be performed using various protocols, such as the Diffie-Hellman Key Exchange (DHKE), RSA, or Elliptic Curve Diffie-Hellman (ECDH). These protocols are designed to securely exchange cryptographic keys over an insecure channel. For example, DHKE allows two parties to establish a shared secret key, even if they are communicating over a public channel, without ever transmitting the secret key itself. 
+
+We do not need a secure channel for key exchange when using DHKE because the security of the key exchange relies on the mathematical properties of the protocol, which makes it computationally infeasible for an eavesdropper to determine the shared secret. However, it is essential that the initial public parameters (like the prime number and the base) are properly agreed upon and verified to avoid man-in-the-middle attacks.
+
+Q2. What is an advantage and a disadvantage of DHKE?
+
+Advantage:
+- One advantage of DHKE is that it allows two parties to securely establish a shared secret key over an insecure channel. This eliminates the need for a pre-shared key and enhances security in open networks, making it useful for establishing secure communications.
+
+Disadvantage:
+- A notable disadvantage of DHKE is its vulnerability to man-in-the-middle attacks. If an attacker can intercept the initial exchange of public keys, they can impersonate each party to the other, effectively decrypting and re-encrypting messages. To mitigate this risk, DHKE should be combined with authentication mechanisms, such as digital signatures or certificates, to ensure the integrity and authenticity of the public keys being exchanged.
