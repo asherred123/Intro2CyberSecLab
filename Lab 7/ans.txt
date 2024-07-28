@@ -1,0 +1,6 @@
+ Explain one limitation of RSA protocol attacks
+ 
+ Ans: One limitation of the RSA protocol attack, is that it relies on the lack of proper padding schemes in the RSA implementation. In modern cryptographic practices, padding schemes like
+PKCS.PSS are commonly used to secure RSA signatures and encryption. These padding schemes add an element of randomness and structure to the data being encrypted or signed, making it computationally infeasible
+for an attacker to predict or recreate a valid signature without access to the private key.
+
